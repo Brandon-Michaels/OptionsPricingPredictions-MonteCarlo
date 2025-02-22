@@ -65,7 +65,7 @@ double monteCarloOptionPricing(double S, double K, double T, double r, double si
 }
 
 // Helper function to parse the CSV for stock data
-void readCSV(std::vector<std::vector<std::string>>& data, const std::string& filename) {
+void readCSV(std::vector<std::vector<std::string> >& data, const std::string& filename) {
     std::ifstream file(filename);
     std::string line;
     while (std::getline(file, line)) {
@@ -81,32 +81,52 @@ void readCSV(std::vector<std::vector<std::string>>& data, const std::string& fil
 
 int main() {
     // Read data from CSV (stock data)
-    std::vector<std::vector<std::string>> stockData;
+    std::vector<std::vector<std::string> > stockData;
     readCSV(stockData, "stock_data.csv");
 
     // Read option chain data (calls)
-    std::vector<std::vector<std::string>> optionData;
+    std::vector<std::vector<std::string> > optionData;
     readCSV(optionData, "option_data.csv");
 
-    // Assume first row of option data for pricing
-    double stockPrice = std::stod(stockData.back()[4]);  // Latest stock closing price
-    double strikePrice = std::stod(optionData[0][2]);    // First option strike price
-    double T = 30.0 / 365;  // 30 days to expiration
-    double r = 0.05;        // Risk-free rate
-    double sigma = std::stod(optionData[0][6]); // Implied volatility
-    bool callOption = true;  // Call option
+    if (stockData.empty() || optionData.empty()) {
+        std::cerr << "Error: CSV data is empty." << std::endl;
+        return 1;
+    }
 
-    // Black-Scholes model
-    double bsPrice = blackScholes(stockPrice, strikePrice, T, r, sigma, callOption);
-    std::cout << "Black-Scholes Price: " << bsPrice << std::endl;
+    try {
+        // Ensure we have enough rows and columns before accessing
+        if (stockData.size() < 2 || stockData.back().size() <= 4) {
+            throw std::invalid_argument("Stock data missing or incorrectly formatted.");
+        }
+        if (optionData.size() < 2 || optionData[0].size() <= 6) {
+            throw std::invalid_argument("Option data missing or incorrectly formatted.");
+        }
 
-    // Binomial model
-    double binomialPrice = binomialOptionPricing(stockPrice, strikePrice, T, r, sigma, 1000, callOption);
-    std::cout << "Binomial Model Price: " << binomialPrice << std::endl;
+        // Convert necessary values with additional checks
+        double stockPrice = std::stod(stockData.back()[4]);  // Latest stock closing price
+        double strikePrice = std::stod(optionData[1][2]);    // First option strike price
+        double sigma = std::stod(optionData[1][6]);          // Implied volatility
 
-    // Monte Carlo simulation
-    double monteCarloPrice = monteCarloOptionPricing(stockPrice, strikePrice, T, r, sigma, 10000, callOption);
-    std::cout << "Monte Carlo Simulation Price: " << monteCarloPrice << std::endl;
+        double T = 30.0 / 365;  // 30 days to expiration
+        double r = 0.05;        // Risk-free rate
+        bool callOption = true; // Call option
+
+        // Black-Scholes model
+        double bsPrice = blackScholes(stockPrice, strikePrice, T, r, sigma, callOption);
+        std::cout << "Black-Scholes Price: " << bsPrice << std::endl;
+
+        // Binomial model
+        double binomialPrice = binomialOptionPricing(stockPrice, strikePrice, T, r, sigma, 1000, callOption);
+        std::cout << "Binomial Model Price: " << binomialPrice << std::endl;
+
+        // Monte Carlo simulation
+        double monteCarloPrice = monteCarloOptionPricing(stockPrice, strikePrice, T, r, sigma, 10000, callOption);
+        std::cout << "Monte Carlo Simulation Price: " << monteCarloPrice << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
 
     return 0;
 }
