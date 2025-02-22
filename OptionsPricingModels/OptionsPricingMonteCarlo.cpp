@@ -105,7 +105,8 @@ int main() {
         // Convert necessary values with additional checks
         double stockPrice = std::stod(stockData.back()[4]);  // Latest stock closing price
         double strikePrice = std::stod(optionData[1][2]);    // First option strike price
-        double sigma = std::stod(optionData[1][6]);          // Implied volatility
+        double sigma = std::stod(optionData[1][11]);         // Implied volatility
+        double marketPrice = std::stod(optionData[1][3]);    // lastPrice column
 
         double T = 30.0 / 365;  // 30 days to expiration
         double r = 0.05;        // Risk-free rate
@@ -113,15 +114,45 @@ int main() {
 
         // Black-Scholes model
         double bsPrice = blackScholes(stockPrice, strikePrice, T, r, sigma, callOption);
-        std::cout << "Black-Scholes Price: " << bsPrice << std::endl;
 
         // Binomial model
         double binomialPrice = binomialOptionPricing(stockPrice, strikePrice, T, r, sigma, 1000, callOption);
-        std::cout << "Binomial Model Price: " << binomialPrice << std::endl;
 
         // Monte Carlo simulation
         double monteCarloPrice = monteCarloOptionPricing(stockPrice, strikePrice, T, r, sigma, 10000, callOption);
-        std::cout << "Monte Carlo Simulation Price: " << monteCarloPrice << std::endl;
+
+        // Check if the option is deep ITM
+        bool deepITM = false;
+        if (callOption && (stockPrice > 1.5 * strikePrice)) {  
+            deepITM = true;
+        } else if (!callOption && (strikePrice > 1.5 * stockPrice)) {
+            deepITM = true;
+        }
+
+        // Print formatted results
+        std::cout << "\n--- Option Pricing Results ---" << std::endl;
+        std::cout << "Black-Scholes Price: $" << bsPrice << std::endl;
+        std::cout << "Binomial Model Price: $" << binomialPrice << std::endl;
+        std::cout << "Monte Carlo Simulation Price: $" << monteCarloPrice << std::endl;
+        std::cout << "Market Price: $" << marketPrice << std::endl;
+
+        // Decision making
+        if (deepITM) {
+            std::cout << "\nThe option is DEEP IN-THE-MONEY (ITM)." << std::endl;
+            std::cout << "Options deep ITM can have different market behaviors, and model estimates might not be accurate.\n";
+            std::cout << "It might be best to check liquidity and spreads before making a decision." << std::endl;
+        } 
+        else {
+            if (marketPrice > bsPrice) {
+                std::cout << "\nThe option appears OVERPRICED compared to theoretical models." << std::endl;
+                std::cout << "Recommendation: Consider SELLING (or writing) the option." << std::endl;
+            } else if (marketPrice < bsPrice) {
+                std::cout << "\nThe option appears UNDERPRICED compared to theoretical models." << std::endl;
+                std::cout << "Recommendation: Consider BUYING the option." << std::endl;
+            } else {
+                std::cout << "\nThe option is FAIRLY PRICED based on theoretical models." << std::endl;
+            }
+        }
     }
     catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
